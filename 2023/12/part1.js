@@ -1,8 +1,8 @@
 const fs = require("fs");
 
-let cache = new Map();
+const toKey = ({ rule, prev, run }) => `${rule},${prev},${run}`;
 
-fs.readFile("./test.txt", "utf-8", (err, data) => {
+fs.readFile("./data.txt", "utf-8", (err, data) => {
   if (err) throw err;
 
   lines = data.split("\r\n");
@@ -10,162 +10,102 @@ fs.readFile("./test.txt", "utf-8", (err, data) => {
   let springs = [];
   lines.forEach((line) => {
     row = line.split(" ");
-    let group = {
-      string: row[0],
-      target: row[1].split(",").map(Number),
+    let spring = {
+      pattern: row[0],
+      rules: row[1].split(",").map(Number),
     };
-    springs.push(group);
+    springs.push(spring);
   });
 
   let combos = 0;
-  springs.forEach((group) => {
-    console.log("Processing: " + group.string + " / " + group.target);
-    let count = combinatron(group);
+  springs.forEach((spring) => {
+    console.log("Processing: " + spring.pattern + " / " + spring.rules);
+    let count = combinatron(spring);
     console.log("Possible Combinations: " + count);
     combos += count;
   });
   console.log("Total possible combinations: " + combos);
 });
 
-function combinatron(group) {
-  let target = group.target;
-  let string = group.string.replace(/(\.+)/g, ".");
-  let count = 0;
-
+function combinatron(spring) {
+  let rules = spring.rules;
+  let pattern = spring.pattern.replace(/(\.+)/g, ".").split("");
+  
   // some strings only have 1 possible solution, try to identify those
-  if (singleSolution(string, target)) return 1;
+  if (singleSolution(spring.pattern, rules)) return 1;
 
-  let sets = Array.from(string.matchAll(/([#?]+)/g), (m) => m[0]);
-  console.log(sets);
-  console.log(target);
-
-  if (sets.length == target.length) {
-    // iterate through the sets
-    let p = 0;
-    let foo = sets.length;
-    for (let i = 0; i < foo; i++) {
-      console.log(sets);
-      console.log(target);
-      console.log("index: " + i + " pruned: " + p + " actual: " + (i - p));
-      let s = sets[i - p];
-      let t = target[i - p];
-
-      console.log(" set: " + s + " length: " + s.length + " target: " + t);
-      // if the length of the set is equal to the target #, there is only 1 way it can be filled
-      if (s.length == t) {
-        console.log("purge 1");
-        sets.splice(i - p, 1);
-        target.splice(i - p, 1);
-        p++;
-        continue;
+  const Handlers = {
+    '.': branch => {
+      if (branch.rule === -1 || branch.run === rules[branch.rule]) {
+        return [ { rule: branch.rule, run: branch.run, prev: '.' } ];
       }
 
-      // if the set already contains the needed number of #'s
-      if ((s.match(/[#]/g) || []).length == t) {
-        console.log("purge 2");
-        sets.splice(i - p, 1);
-        target.splice(i - p, 1);
-        p++;
-        continue;
-      }
-
-      // if the target value is 1, the answer is the length of the set
-      if (t == 1) {
-        count += s.length;
-        console.log("length of s " + s + " is same as t " + t + " pruning");
-        sets.splice(i - p, 1);
-        target.splice(i - p, 1);
-        p++;
-        continue;
-      }
-    }
-  }
-  console.log(sets);
-  if (sets.length == 0) return count;
-
-  string = sets.join(".");
-
-  let branches = [
-    {
-      br: "",
-      str: string.split(""),
-      prev: "",
-      idx: 0,
+      return [];
     },
-  ];
-
-  let done = false;
-  let steps = 0;
-
-  console.log(branches);
-  /*
-  ????.######..#####.  1,6,5
-
-
-
-
-  */
-
-  while (!done) {
-    // iterate through our list of valid branches
-    for (let i = 0; i < branches.length; i++) {
-      steps++;
-      let b = branches[i];
-      let br = b.br;
-      let prevChar = b.prev;
-      let str = b.str;
-      let index = b.idx;
-      let hashes = (br.match(/[#]/g) || []).length;
-      // if current branch is max length, skip it
-      console.log(str);
-      if (index >= str.length) {
-        continue;
-      }
-
-      let restOfString = str.join("").substr(index);
-
-      // if the rest of the string does not contain any ?'s append and check if valid
-      if (!restOfString.includes("?")) {
-        branches[i].br += restOfString;
-        if (!isPossible(str, branches[i].br, target)) {
-          branches.splice(i, 1);
+    '#': branch => {
+      if (branch.prev === '#') {
+        if (branch.run !== rules[branch.rule]) {
+          return [ { rule: branch.rule, run: branch.run + 1, prev: '#' } ];
         }
-        continue;
-      }
-
-      let char = str[index];
-
-      // non branching, add to string and move on
-      if (char != "?") {
-        branches[i].br += char;
-        // test new string for validity
-        if (!isPossible(str, branches[i].br, target)) branches.splice(i, 1);
-        continue;
-      }
-
-      // create new branch
-      if (char == "?") {
-        let branch = branches[i].br + "#";
-        if (isPossible(str, branch, target)) {
-          if (!branches.br.includes(branch)) {
-            branches.br.push(branch);
-          }
+      } else {
+        let rule = branch.rule + 1;
+        if (rule !== rules.length) {
+          return [ { rule, run: 1, prev: '#' } ];
         }
-        branches[i].br += ".";
-        if (!isPossible(str, branches[i].br, target)) branches.splice(i, 1);
       }
-    }
-    //branches = [...new Set(branches)];
-    done = branches.br.every((str) => str.length == string.length);
+
+      return [];
+    },
+    '?': branch => {
+      const nextBranches = [];
+
+      if (branch.prev === '#') {
+        const prev = branch.run === rules[branch.rule] ? '.' : '#';
+        const run = branch.run + (prev === '#' ? 1 : 0);
+        nextBranches.push({ rule: branch.rule, run, prev });
+      } else {
+        // Not currently on a run
+        nextBranches.push({ rule: branch.rule, run: branch.run, prev: '.' });
+        const rule = branch.rule + 1;
+
+        if (rule !== rules.length) {
+          // There are more runs, so add a branch that starts a new one
+          nextBranches.push({ rule, run: 1, prev: '#' });
+        }
+      }
+      return nextBranches;
+    },
+  };
+
+  const toKey = ({ rule, run, prev }) => `${rule},${run},${prev}`;
+  const startBranch = { rule: -1, run: 0, prev: '.' };
+  let branches = new Map();
+  branches.set(toKey(startBranch), { branch: startBranch, count: 1 });
+
+  for (let i = 0; i < pattern.length; i++) {
+    const nextBranches = new Map();
+    const handler = Handlers[pattern[i]];
+    [ ...branches.values() ].forEach(({ branch, count }) => {
+      handler(branch).forEach(b => {
+        const key = toKey(b);
+        const nextCount = (nextBranches.get(key)?.count ?? 0) + count;
+        nextBranches.set(key, { branch: b, count: nextCount });
+      });
+    });
+    branches = nextBranches;
   }
-  // build a cache
-  console.log(branches);
-  console.log("Solution steps: " + steps);
-  //branches.forEach(b => {});
 
-  return count + branches.length;
-}
+  // Prune any branches that haven't fulfilled all runs; then sum the counts of the remaining
+  // branches
+  return [ ...branches.values() ].reduce(
+    (acc, { branch, count }) => {
+      const { rule, run } = branch;
+      return acc + (rule === rules.length - 1 && run === rules[rule] ? count : 0);
+    }, 0
+  );
+};
 
+// todo: try to identify more cases where thereis a single solution
 function singleSolution(string, target) {
   let sum = target.reduce((sum, num) => sum + num);
 
@@ -180,22 +120,4 @@ function singleSolution(string, target) {
   if (sum == nonDots) return true;
 
   return false;
-}
-
-// check if current string is still a potential solution
-// todo: try to exhaust more cases of definite failure
-function isPossible(str, br, target) {
-  let strlen = str.length;
-  let brlen = br.length;
-  let left = strlen - brlen;
-  let hashes = (br.match(/[#]/g) || []).length;
-  let needed = target.reduce((sum, num) => sum + num);
-
-  // if remaining possible spots for non dots + nondots < sum
-  if (left + hashes < needed) return false;
-
-  let check = Array.from(br.matchAll(/([#]+)/g), (m) => m[0]);
-  if (check.length > target.length) return false;
-  if (!check) return true;
-  return check.every((s, i) => s.length <= target[i]);
 }

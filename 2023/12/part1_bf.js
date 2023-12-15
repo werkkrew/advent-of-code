@@ -1,5 +1,6 @@
 // bad mostly brute force solution
 const fs = require("fs");
+let tsteps = 0;
 
 fs.readFile("./data.txt", "utf-8", (err, data) => {
   if (err) throw err;
@@ -25,6 +26,7 @@ fs.readFile("./data.txt", "utf-8", (err, data) => {
     combos += count;
   });
   console.log("Total possible combinations: " + combos);
+  console.log("Total steps taken: " + tsteps)
 });
 
 // count possible combinations
@@ -84,6 +86,8 @@ function combinatron(group) {
     branches = [...new Set(branches)];
     done = branches.every((str) => str.length == string.length);
   }
+  console.log("Steps Taken: " + steps);
+  tsteps += steps;
   return branches.length;
 }
 
