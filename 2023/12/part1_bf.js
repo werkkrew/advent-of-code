@@ -1,6 +1,7 @@
+// bad mostly brute force solution
 const fs = require("fs");
 
-fs.readFile("./test.txt", "utf-8", (err, data) => {
+fs.readFile("./data.txt", "utf-8", (err, data) => {
   if (err) throw err;
 
   lines = data.split("\r\n");
@@ -17,11 +18,10 @@ fs.readFile("./test.txt", "utf-8", (err, data) => {
 
   let combos = 0;
   springs.forEach((group) => {
-    console.log("Processing: " + group.string + " / " + group.target);
-    group = unfold(group);
-    console.log(group);
+    //console.log("Processing: " + group.string + " / " + group.target);
     let count = combinatron(group);
-    console.log("Possible Combinations: " + count);
+    //console.log("Possible Combinations: " + count);
+    console.log(count);
     combos += count;
   });
   console.log("Total possible combinations: " + combos);
@@ -119,16 +119,4 @@ function singleSolution(string, target) {
   if (sum == nonDots) return true;
 
   return false;
-}
-
-function unfold(group) {
-  let target = group.target;
-  let string = group.string;
-
-  group.string = Array(5).fill(string).join("?");
-  group.target = Array(5).fill(target).join(",");
-
-  group.target = group.target.split(",").map(Number);
-
-  return group;
 }
