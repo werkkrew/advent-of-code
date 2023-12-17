@@ -21,40 +21,24 @@ fs.readFile("./data.txt", "utf-8", (err, data) => {
   });
 
   let sum = 0;
-  let nus = 0;
   patterns.forEach((pattern) => {
-    nus++;
-    console.log("processing pattern " + nus);
     sum += process(pattern);
   });
   console.log("Magic Number is: " + sum);
 });
 
 function process(pattern) {
-  let result = 0;
+  let index = 0;
   let orientation = "horizontal";
-  let index = mirroredness(pattern);
-  if (!index) {
+  index = mirroredness(pattern);
+  if (index == 0){
     orientation = "vertical";
     pattern = transpose(pattern);
     index = mirroredness(pattern);
   }
 
-  if (!index) {
-    orientation = "none";
-    console.log("unable to find any mirroredednewsss");
-  } else {
-    console.log(orientation + " mirroredness found at index " + index);
-  }
-
-  if (orientation == "vertical") {
-    return index;
-  }
-
-  if (orientation == "horizontal") {
-    return index * 100;
-  }
-  return 0;
+  let score = (orientation == "horizontal") ? index * 100 : index; 
+  return score;
 }
 
 function mirroredness(pattern) {
@@ -67,15 +51,16 @@ function mirroredness(pattern) {
       buf = pattern[i];
     } else {
       if (JSON.stringify(buf) === JSON.stringify(pattern[i])) {
-        index = i;
         mirrored = reflect(pattern, i);
-        break;
+        if (mirrored) {
+          index = i;
+          break;
+        }
       }
       buf = pattern[i];
     }
   }
-  if (mirrored) return index;
-  return false;
+  return index;
 }
 
 function reflect(pattern, index) {
@@ -83,33 +68,24 @@ function reflect(pattern, index) {
   let bot = index;
   let mirrored = false;
 
+  // this is cludge to deal with mirror being the first two 
+  if (top <= 0) {
+    if (JSON.stringify(pattern[0]) === JSON.stringify(pattern[1])) return true;
+  }
+
+  if (index == pattern.length - 1) {
+    if (JSON.stringify(pattern[top]) === JSON.stringify(pattern[bot])) return true
+  }
+
   for (let i = index; i < pattern.length - 1; i++) {
     top -= 1;
     bot += 1;
-    if (JSON.stringify(pattern[top]) === JSON.stringify(pattern[bot])) {
-      mirrored = true;
+    if (top < 0) break;
+    if (JSON.stringify(pattern[top]) != JSON.stringify(pattern[bot])) {
+      return false;
     } else {
-      mirrored = false;
+      mirrored = true;
     }
   }
   return mirrored;
 }
-
-/*
-
-0 #...##..#
-1 #....#..#
-2 ..##..###
-3 #####.##.
-4 #####.##.
-5 ..##..###
-6 #....#..#
-
-found index = 4
-increment from 4
-decrement from index - 1 = 3
-test 5 vs 2
-test 6 vs 1
-max length reached
-passed
-*/
