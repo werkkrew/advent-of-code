@@ -53,6 +53,7 @@ fs.readFile("./data.txt", "utf-8", (err, data) => {
 
 function pewpew(grid) {
   let energized = new Set();
+  let splitters = new Set();
   let beams = [
     {
       direction: "right",
@@ -62,6 +63,7 @@ function pewpew(grid) {
 
   function moveBeam(beam, tile) {
     let dir = beam.direction;
+
     if (tile == ".") {
       beam.location[0] += move[dir][0];
       beam.location[1] += move[dir][1];
@@ -77,9 +79,6 @@ function pewpew(grid) {
     }
 
     if (tile == "/") {
-      console.log(
-        "on tile " + tile + " at coordinate " + beam.location + " moving " + dir
-      );
       beam.direction = forwardslash[dir];
       dir = beam.direction;
       beam.location[0] += move[dir][0];
@@ -89,7 +88,13 @@ function pewpew(grid) {
 
     if (tile == "-") {
       beam.direction = dash[dir];
+      if (splitters.has(beam.location.toString())) {
+        beam.done = true;
+        return beam;
+      }
+      splitters.add(beam.location.toString());
       if (beam.direction == "split") {
+        splitters.add(beam.location.toString());
         let newx = beam.location[0] + move.right[0];
         let newy = beam.location[1] + move.right[1];
         let newbeam = {
@@ -109,6 +114,11 @@ function pewpew(grid) {
 
     if (tile == "|") {
       beam.direction = pipe[dir];
+      if (splitters.has(beam.location.toString())) {
+        beam.done = true;
+        return beam;
+      }
+      splitters.add(beam.location.toString());
       if (beam.direction == "split") {
         let newx = beam.location[0] + move.up[0];
         let newy = beam.location[1] + move.up[1];
@@ -128,57 +138,34 @@ function pewpew(grid) {
     }
   }
 
-  let moving = 0;
-
   while (true) {
     // iterate through all of the beams
     for (let i = 0; i < beams.length; i++) {
       let beam = beams[i];
-      let stable = 0;
       energized.add(beam.location.toString());
 
-      if (beam.hasOwnProperty("done") || i > 1000) break;
+      if (beam.hasOwnProperty("done")) break;
 
+      // let the beam travel around until it either leaves the grid or repeats its path
       while (true) {
-        console.log("Processing beam: " + i);
         const y = beam.location[0];
         const x = beam.location[1];
         const tile = grid[y][x];
-        console.log("Current tile: " + tile);
         beam = moveBeam(beam, tile);
-        console.log(
-          "Beam moved to: " +
-            beam.location +
-            " and is now moving " +
-            beam.direction
-        );
+        if (beam.hasOwnProperty("done")) break;
         if (
           beam.location[0] < 0 ||
           beam.location[1] < 0 ||
           beam.location[0] >= grid[0].length ||
           beam.location[1] >= grid[1].length
         ) {
-          console.log("beam has exited the grid");
           beam.done = true;
           break;
-        }
-        // might be done moving
-        if (energized.has(beam.location.toString())) {
-          stable++;
-          if (stable >= 100) {
-            console.log("beam has stopped adding energized cells " + stable);
-            beam.done = true;
-            break;
-          }
         }
         energized.add(beam.location.toString());
       }
     }
-    console.log("Current beams");
-    console.log(beams);
-    console.log(energized.size);
-
-    if (beams.every((x) => x.done === true) || beams.length > 1000) break;
+    if (beams.every((x) => x.done === true)) break;
   }
   return energized;
 }

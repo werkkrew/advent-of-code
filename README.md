@@ -11,3 +11,4 @@ Puzzles I would like to re-do because my solutions are bad or slow:
 - Day 5, Part 2
 - Day 8
 - Day 12
+- Day 16 - this one is a real mess
