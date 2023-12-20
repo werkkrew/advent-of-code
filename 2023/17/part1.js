@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-fs.readFile("./test.txt", "utf-8", (err, data) => {
+fs.readFile("./data.txt", "utf-8", (err, data) => {
   if (err) throw err;
 
   const lines = data.split("\r\n");
@@ -27,7 +27,6 @@ function navigate(grid, min = 1, max = 3) {
 
   while (queue) {
     let item = queue.dequeue();
-    console.log(item);
     cost = item.priority;
     let y = item.val[0];
     let x = item.val[1];
@@ -35,20 +34,20 @@ function navigate(grid, min = 1, max = 3) {
     if (goal[0] == y && goal[1] == x) break;
     if (seen.has(item.val.toString())) continue;
     seen.add(item.val.toString());
-    console.log(seen);
     let original_cost = cost;
     [-1, 1].forEach((s) => {
       cost = original_cost;
       let new_x = x;
       let new_y = y;
-      for (let i = 1; max + 1; i++) {
-        console.log(i);
+      for (let i = 1; i <= max; i++) {
         if (direction == 1) {
           new_x = x + i * s;
         } else {
           new_y = y + i * s;
         }
-        if (new_x < 0 || new_y < 0 || new_x > max_x || new_y > max_y) break;
+        if (new_x < 0 || new_y < 0 || new_x > max_x || new_y > max_y) {
+          break;
+        }
         cost += grid[new_y][new_x];
         if (seen.has([new_y, new_x, 1 - direction].toString())) continue;
         if (i >= min) queue.enqueue([new_y, new_x, 1 - direction], cost);
@@ -80,7 +79,7 @@ class PriorityQueue {
       let parentIndex = Math.floor((index - 1) / 2);
       let parent = this.values[parentIndex];
 
-      if (parent.priority <= current.priority) {
+      if (parent.priority >= current.priority) {
         this.values[parentIndex] = current;
         this.values[index] = parent;
         index = parentIndex;
@@ -88,7 +87,7 @@ class PriorityQueue {
     }
   }
   dequeue() {
-    const max = this.values[0];
+    const min = this.values[0];
     const end = this.values.pop();
     this.values[0] = end;
 
@@ -103,13 +102,13 @@ class PriorityQueue {
 
       if (leftChildIndex < length) {
         leftChild = this.values[leftChildIndex];
-        if (leftChild.priority > current.priority) swap = leftChildIndex;
+        if (leftChild.priority < current.priority) swap = leftChildIndex;
       }
       if (rightChildIndex < length) {
         rightChild = this.values[rightChildIndex];
         if (
-          (swap === null && rightChild.priority > current.priority) ||
-          (swap !== null && rightChild.priority > leftChild.priority)
+          (swap === null && rightChild.priority < current.priority) ||
+          (swap !== null && rightChild.priority < leftChild.priority)
         )
           swap = rightChildIndex;
       }
@@ -120,6 +119,6 @@ class PriorityQueue {
       index = swap;
     }
 
-    return max;
+    return min;
   }
 }
