@@ -1,171 +1,125 @@
 const fs = require("fs");
 
-const move = {
-  right: [0, 1],
-  left: [0, -1],
-  up: [-1, 0],
-  down: [1, 0],
-};
-
-// how will the beam direction change if it hits a \
-const backslash = {
-  right: "down",
-  left: "up",
-  up: "left",
-  down: "right",
-};
-
-// how will the beam direction change if it hits a /
-const forwardslash = {
-  right: "up",
-  left: "down",
-  up: "right",
-  down: "left",
-};
-
-const dash = {
-  right: "right",
-  left: "left",
-  up: "split",
-  down: "split",
-};
-
-const pipe = {
-  right: "split",
-  left: "split",
-  up: "up",
-  down: "down",
-};
-
-fs.readFile("./data.txt", "utf-8", (err, data) => {
+fs.readFile("./test.txt", "utf-8", (err, data) => {
   if (err) throw err;
 
   const lines = data.split("\r\n");
 
   let grid = [];
   lines.forEach((line) => {
-    grid.push(line.split(""));
+    grid.push(line.split("").map(Number));
   });
 
-  let laser = pewpew(grid);
-  console.log(laser.size);
+  let cost = navigate(grid, 1, 3);
+  console.log(cost);
 });
 
-function pewpew(grid) {
-  let energized = new Set();
-  let splitters = new Set();
-  let beams = [
-    {
-      direction: "right",
-      location: [0, 0],
-    },
-  ];
+function navigate(grid, min = 1, max = 3) {
+  const queue = new PriorityQueue();
+  let max_x = grid[0].length - 1;
+  let max_y = grid.length - 1;
+  let goal = [max_y, max_x];
+  let seen = new Set();
+  let cost = 0;
+  // [y, x, direction], cost
+  queue.enqueue([0, 0, 0], 0);
+  queue.enqueue([0, 0, 1], 0);
 
-  function moveBeam(beam, tile) {
-    let dir = beam.direction;
-
-    if (tile == ".") {
-      beam.location[0] += move[dir][0];
-      beam.location[1] += move[dir][1];
-      return beam;
-    }
-
-    if (tile == "\\") {
-      beam.direction = backslash[dir];
-      dir = beam.direction;
-      beam.location[0] += move[dir][0];
-      beam.location[1] += move[dir][1];
-      return beam;
-    }
-
-    if (tile == "/") {
-      beam.direction = forwardslash[dir];
-      dir = beam.direction;
-      beam.location[0] += move[dir][0];
-      beam.location[1] += move[dir][1];
-      return beam;
-    }
-
-    if (tile == "-") {
-      beam.direction = dash[dir];
-      if (splitters.has(beam.location.toString())) {
-        beam.done = true;
-        return beam;
-      }
-      splitters.add(beam.location.toString());
-      if (beam.direction == "split") {
-        splitters.add(beam.location.toString());
-        let newx = beam.location[0] + move.right[0];
-        let newy = beam.location[1] + move.right[1];
-        let newbeam = {
-          direction: "right",
-          location: [newx, newy],
-        };
-        beam.direction = "left";
-        beam.location[0] += move.left[0];
-        beam.location[1] += move.left[1];
-        if (newx >= 0 && newy >= 0) beams.push(newbeam);
-      } else {
-        beam.location[0] += move[dir][0];
-        beam.location[1] += move[dir][1];
-      }
-      return beam;
-    }
-
-    if (tile == "|") {
-      beam.direction = pipe[dir];
-      if (splitters.has(beam.location.toString())) {
-        beam.done = true;
-        return beam;
-      }
-      splitters.add(beam.location.toString());
-      if (beam.direction == "split") {
-        let newx = beam.location[0] + move.up[0];
-        let newy = beam.location[1] + move.up[1];
-        let newbeam = {
-          direction: "up",
-          location: [newx, newy],
-        };
-        beam.direction = "down";
-        beam.location[0] += move.down[0];
-        beam.location[1] += move.down[1];
-        if (newx >= 0 && newy >= 0) beams.push(newbeam);
-      } else {
-        beam.location[0] += move[dir][0];
-        beam.location[1] += move[dir][1];
-      }
-      return beam;
-    }
-  }
-
-  while (true) {
-    // iterate through all of the beams
-    for (let i = 0; i < beams.length; i++) {
-      let beam = beams[i];
-      energized.add(beam.location.toString());
-
-      if (beam.hasOwnProperty("done")) break;
-
-      // let the beam travel around until it either leaves the grid or repeats its path
-      while (true) {
-        const y = beam.location[0];
-        const x = beam.location[1];
-        const tile = grid[y][x];
-        beam = moveBeam(beam, tile);
-        if (beam.hasOwnProperty("done")) break;
-        if (
-          beam.location[0] < 0 ||
-          beam.location[1] < 0 ||
-          beam.location[0] >= grid[0].length ||
-          beam.location[1] >= grid[1].length
-        ) {
-          beam.done = true;
-          break;
+  while (queue) {
+    let item = queue.dequeue();
+    console.log(item);
+    cost = item.priority;
+    let y = item.val[0];
+    let x = item.val[1];
+    let direction = item.val[2];
+    if (goal[0] == y && goal[1] == x) break;
+    if (seen.has(item.val.toString())) continue;
+    seen.add(item.val.toString());
+    console.log(seen);
+    let original_cost = cost;
+    [-1, 1].forEach((s) => {
+      cost = original_cost;
+      let new_x = x;
+      let new_y = y;
+      for (let i = 1; max + 1; i++) {
+        console.log(i);
+        if (direction == 1) {
+          new_x = x + i * s;
+        } else {
+          new_y = y + i * s;
         }
-        energized.add(beam.location.toString());
+        if (new_x < 0 || new_y < 0 || new_x > max_x || new_y > max_y) break;
+        cost += grid[new_y][new_x];
+        if (seen.has([new_y, new_x, 1 - direction].toString())) continue;
+        if (i >= min) queue.enqueue([new_y, new_x, 1 - direction], cost);
       }
-    }
-    if (beams.every((x) => x.done === true)) break;
+    });
   }
-  return energized;
+  return cost;
+}
+
+// based on: https://www.digitalocean.com/community/tutorials/js-binary-heaps
+class Node {
+  constructor(val, priority) {
+    this.val = val;
+    this.priority = priority;
+  }
+}
+
+class PriorityQueue {
+  constructor() {
+    this.values = [];
+  }
+  enqueue(val, priority) {
+    let newNode = new Node(val, priority);
+    this.values.push(newNode);
+    let index = this.values.length - 1;
+    const current = this.values[index];
+
+    while (index > 0) {
+      let parentIndex = Math.floor((index - 1) / 2);
+      let parent = this.values[parentIndex];
+
+      if (parent.priority <= current.priority) {
+        this.values[parentIndex] = current;
+        this.values[index] = parent;
+        index = parentIndex;
+      } else break;
+    }
+  }
+  dequeue() {
+    const max = this.values[0];
+    const end = this.values.pop();
+    this.values[0] = end;
+
+    let index = 0;
+    const length = this.values.length;
+    const current = this.values[0];
+    while (true) {
+      let leftChildIndex = 2 * index + 1;
+      let rightChildIndex = 2 * index + 2;
+      let leftChild, rightChild;
+      let swap = null;
+
+      if (leftChildIndex < length) {
+        leftChild = this.values[leftChildIndex];
+        if (leftChild.priority > current.priority) swap = leftChildIndex;
+      }
+      if (rightChildIndex < length) {
+        rightChild = this.values[rightChildIndex];
+        if (
+          (swap === null && rightChild.priority > current.priority) ||
+          (swap !== null && rightChild.priority > leftChild.priority)
+        )
+          swap = rightChildIndex;
+      }
+
+      if (swap === null) break;
+      this.values[index] = this.values[swap];
+      this.values[swap] = current;
+      index = swap;
+    }
+
+    return max;
+  }
 }
