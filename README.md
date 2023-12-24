@@ -20,3 +20,4 @@ Puzzles I would like to re-do because my solutions are bad or slow:
 - Day 16 - this one is a real mess
 - Day 18, part 1 - works fine but the implementation is real sloppy and unneccessary
 - Day 19, part 2 - took too much of this solution from other examples, want to re-do
+- Day 20, this entire puzzle was a bit over my head. Took far more of my code from examples online than I feel good about.
